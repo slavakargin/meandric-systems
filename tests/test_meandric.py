@@ -1,4 +1,4 @@
-"""Tests for meandric systems package."""
+"""Tests for meandric systems package (0-indexed convention)."""
 
 import pytest
 from meandric import (
@@ -15,11 +15,11 @@ from meandric import (
 # ── partition ↔ pairing round-trips ────────────────────────────────────
 
 PARTITION_PAIRING_CASES = [
-    (['0', '1'],               [(1, 2)]),
-    (['0', '10', '11'],        [(1, 2), (3, 4)]),
-    (['00', '01', '1'],        [(1, 4), (2, 3)]),
-    (['0', '10', '110', '111'],[(1, 2), (3, 4), (5, 6)]),
-    (['00', '01', '10', '11'], [(1, 4), (2, 3), (5, 6)]),
+    (['0', '1'],                [(0, 1)]),
+    (['0', '10', '11'],         [(0, 3), (1, 2)]),
+    (['00', '01', '1'],         [(0, 1), (2, 3)]),
+    (['0', '10', '110', '111'], [(0, 5), (1, 2), (3, 4)]),
+    (['00', '01', '10', '11'],  [(0, 5), (1, 4), (2, 3)]),
 ]
 
 
@@ -47,15 +47,15 @@ def test_round_trip_pairing(partition, pairing):
 
 def test_x0_meandric():
     top, bot = tree_pair_to_meandric(X0_DOMAIN, X0_RANGE)
-    assert top == [(1, 2), (3, 4)]
-    assert bot == [(1, 4), (2, 3)]
+    assert top == [(0, 3), (1, 2)]
+    assert bot == [(0, 1), (2, 3)]
 
 
 def test_x0_one_component():
     top, bot = tree_pair_to_meandric(X0_DOMAIN, X0_RANGE)
     comps = meandric_components(top, bot)
     assert len(comps) == 1
-    assert sorted(comps[0]) == [1, 2, 3, 4]
+    assert sorted(comps[0]) == [0, 1, 2, 3]
 
 
 def test_x0_round_trip():
@@ -69,8 +69,8 @@ def test_x0_round_trip():
 
 def test_x1_meandric():
     top, bot = tree_pair_to_meandric(X1_DOMAIN, X1_RANGE)
-    assert top == [(1, 2), (3, 4), (5, 6)]
-    assert bot == [(1, 2), (3, 6), (4, 5)]
+    assert top == [(0, 5), (1, 2), (3, 4)]
+    assert bot == [(0, 3), (1, 2), (4, 5)]
 
 
 def test_x1_two_components():
@@ -82,7 +82,7 @@ def test_x1_two_components():
 
 
 def test_x1_trivial_loop():
-    """The pair {1,2} in both top and bottom gives the trivial loop."""
+    """The pair (1,2) in both top and bottom gives the trivial loop."""
     top, bot = tree_pair_to_meandric(X1_DOMAIN, X1_RANGE)
     comps = meandric_components(top, bot)
     small = [c for c in comps if len(c) == 2][0]
@@ -110,9 +110,8 @@ def test_identity_all_trivial_loops():
 # ── edge cases ────────────────────────────────────────────────────────
 
 def test_single_caret():
-    """Simplest nontrivial tree: one caret, two leaves."""
-    assert partition_to_pairing(['0', '1']) == [(1, 2)]
-    assert pairing_to_partition([(1, 2)]) == ['0', '1']
+    assert partition_to_pairing(['0', '1']) == [(0, 1)]
+    assert pairing_to_partition([(0, 1)]) == ['0', '1']
 
 
 def test_mismatched_leaves_raises():

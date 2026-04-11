@@ -47,9 +47,9 @@ def plot_meandric(
         fig = ax.get_figure()
     ax.set_aspect('equal')
 
-    # Point spacing
+    # Point spacing: 0, 1, 2, ..., 2n-1 left to right
     spacing = 1.0
-    xs = {i: (i - 1) * spacing for i in range(1, num_points + 1)}
+    xs = {i: i * spacing for i in range(num_points)}
     xmin = -0.8
     xmax = (num_points - 1) * spacing + 0.8
 
@@ -57,7 +57,7 @@ def plot_meandric(
     ax.plot([xmin, xmax], [0, 0], color='#cccccc', linewidth=0.5, zorder=0)
 
     # Points
-    for i in range(1, num_points + 1):
+    for i in range(num_points):
         ax.plot(xs[i], 0, 'o', color='#333333', markersize=7, zorder=5)
         ax.text(xs[i], -0.35, str(i), ha='center', va='top', fontsize=10)
 

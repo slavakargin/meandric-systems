@@ -7,10 +7,14 @@ For example, ``['0', '10', '11']`` represents the subdivision
 {[0, 1/2], [1/2, 3/4], [3/4, 1]}.
 
 A noncrossing pairing is a list of pairs ``(i, j)`` with ``i < j``,
-1-indexed, forming a perfect matching on {1, ..., 2n}.
+forming a perfect matching on {0, 1, ..., 2n-1}.
+
+Convention: the Dyck path steps 1, 2, ..., 2n-1 keep their labels,
+while the last step (2n) is relabeled to 0.  In pictures, point 0
+is placed on the left.
 
 A meandric system is a pair ``(top, bottom)`` of noncrossing pairings
-on the same set {1, ..., 2n}.
+on the same set {0, 1, ..., 2n-1}.
 """
 
 from __future__ import annotations
@@ -42,15 +46,6 @@ def _tree_to_partition(tree, prefix: str = '') -> list[str]:
 
 
 # ── Tree ↔ Dyck path ──────────────────────────────────────────────────
-#
-# The encoding rule is:
-#
-#     encode(v) = U · encode(L) · D · encode(R)
-#
-# where a leaf encodes as the empty word.  The left subtree sits
-# *inside* the matched parentheses U...D, while the right subtree
-# follows *after* D.  See the notes for a detailed discussion of
-# why this asymmetry is forced by the Dyck path constraint.
 
 def _tree_to_dyck(tree) -> list[str]:
     """Encode a binary tree as a Dyck path (list of 'U'/'D' steps)."""
@@ -75,26 +70,47 @@ def _dyck_to_tree(path: list[str]):
 
 
 # ── Dyck path ↔ noncrossing pairing ───────────────────────────────────
+#
+# Convention: step i (0-based, 0 ≤ i < 2n) gets label (i+1) % (2n).
+# So steps 0..2n-2 are labeled 1..2n-1, and step 2n-1 is labeled 0.
+
+def _step_to_label(i: int, n2: int) -> int:
+    return (i + 1) % n2
+
+
+def _label_to_step(label: int, n2: int) -> int:
+    return (label - 1) % n2
+
 
 def _dyck_to_pairing(path: list[str]) -> list[tuple[int, int]]:
     """Match each U with the D that returns the path to the same level."""
+    n2 = len(path)
     pairs: list[tuple[int, int]] = []
     stack: list[int] = []
     for i, step in enumerate(path):
+        label = _step_to_label(i, n2)
         if step == 'U':
-            stack.append(i + 1)          # 1-indexed
+            stack.append(label)
         else:
-            pairs.append((stack.pop(), i + 1))
+            u_label = stack.pop()
+            pair = (min(u_label, label), max(u_label, label))
+            pairs.append(pair)
     return sorted(pairs)
 
 
 def _pairing_to_dyck(pairs: list[tuple[int, int]], n: int) -> list[str]:
     """Reconstruct a Dyck path of length 2n from a noncrossing pairing."""
+    n2 = 2 * n
     partner: dict[int, int] = {}
     for a, b in pairs:
         partner[a] = b
         partner[b] = a
-    return ['U' if partner[i] > i else 'D' for i in range(1, 2 * n + 1)]
+    path: list[str] = []
+    for i in range(n2):
+        label = _step_to_label(i, n2)
+        partner_step = _label_to_step(partner[label], n2)
+        path.append('U' if i < partner_step else 'D')
+    return path
 
 
 # ── Public: partition ↔ pairing ────────────────────────────────────────
@@ -102,23 +118,12 @@ def _pairing_to_dyck(pairs: list[tuple[int, int]], n: int) -> list[str]:
 def partition_to_pairing(prefixes: list[str]) -> list[tuple[int, int]]:
     """Convert a dyadic partition (binary tree) to a noncrossing pairing.
 
-    Parameters
-    ----------
-    prefixes : list of str
-        Sorted list of binary strings (leaf addresses).
-
-    Returns
-    -------
-    list of (int, int)
-        Noncrossing perfect matching on {1, ..., 2n}, where *n* is the
-        number of internal nodes (= ``len(prefixes) - 1``).
-
     Examples
     --------
     >>> partition_to_pairing(['0', '10', '11'])
-    [(1, 2), (3, 4)]
+    [(0, 3), (1, 2)]
     >>> partition_to_pairing(['00', '01', '1'])
-    [(1, 4), (2, 3)]
+    [(0, 1), (2, 3)]
     """
     tree = _partition_to_tree(prefixes)
     path = _tree_to_dyck(tree)
@@ -128,21 +133,11 @@ def partition_to_pairing(prefixes: list[str]) -> list[tuple[int, int]]:
 def pairing_to_partition(pairs: list[tuple[int, int]]) -> list[str]:
     """Convert a noncrossing pairing back to a dyadic partition.
 
-    Parameters
-    ----------
-    pairs : list of (int, int)
-        Noncrossing perfect matching, 1-indexed.
-
-    Returns
-    -------
-    list of str
-        Sorted list of binary-string leaf addresses.
-
     Examples
     --------
-    >>> pairing_to_partition([(1, 2), (3, 4)])
+    >>> pairing_to_partition([(0, 3), (1, 2)])
     ['0', '10', '11']
-    >>> pairing_to_partition([(1, 4), (2, 3)])
+    >>> pairing_to_partition([(0, 1), (2, 3)])
     ['00', '01', '1']
     """
     n = len(pairs)
@@ -156,24 +151,12 @@ def pairing_to_partition(pairs: list[tuple[int, int]]) -> list[str]:
 def tree_pair_to_meandric(
     domain: list[str], range_: list[str]
 ) -> tuple[list[tuple[int, int]], list[tuple[int, int]]]:
-    """Convert a Thompson group element (pair of partitions) to a
-    meandric system (pair of noncrossing pairings).
-
-    The domain pairing goes on top, the range pairing on the bottom.
-
-    Parameters
-    ----------
-    domain, range_ : list of str
-        Dyadic partitions with the same number of leaves.
-
-    Returns
-    -------
-    (top, bottom) : pair of list of (int, int)
+    """Convert a Thompson group element to a meandric system.
 
     Examples
     --------
     >>> tree_pair_to_meandric(['0', '10', '11'], ['00', '01', '1'])
-    ([(1, 2), (3, 4)], [(1, 4), (2, 3)])
+    ([(0, 3), (1, 2)], [(0, 1), (2, 3)])
     """
     if len(domain) != len(range_):
         raise ValueError(
@@ -190,18 +173,9 @@ def meandric_to_tree_pair(
 ) -> tuple[list[str], list[str]]:
     """Convert a meandric system back to a Thompson group element.
 
-    Parameters
-    ----------
-    top, bottom : list of (int, int)
-        Noncrossing pairings (same cardinality).
-
-    Returns
-    -------
-    (domain, range_) : pair of list of str
-
     Examples
     --------
-    >>> meandric_to_tree_pair([(1, 2), (3, 4)], [(1, 4), (2, 3)])
+    >>> meandric_to_tree_pair([(0, 3), (1, 2)], [(0, 1), (2, 3)])
     (['0', '10', '11'], ['00', '01', '1'])
     """
     domain = pairing_to_partition(top)
@@ -216,30 +190,13 @@ def meandric_components(
 ) -> list[list[int]]:
     """Find connected components of the meandric system.
 
-    Starting from any point, we alternately follow top and bottom arcs
-    until we return to the start.  Each such orbit is one closed curve
-    of the meandric system.
-
-    Parameters
-    ----------
-    top, bottom : list of (int, int)
-        Noncrossing pairings on {1, ..., 2n}.
-
-    Returns
-    -------
-    list of list of int
-        Each inner list contains the points visited by one closed curve,
-        in traversal order (without repeating the start).
-
     Examples
     --------
-    >>> meandric_components([(1, 2), (3, 4)], [(1, 4), (2, 3)])
-    [[1, 2, 3, 4]]
-    >>> meandric_components([(1, 2), (3, 4), (5, 6)],
-    ...                     [(1, 2), (3, 6), (4, 5)])
-    [[1, 2], [3, 4, 5, 6]]
+    >>> meandric_components([(0, 3), (1, 2)], [(0, 1), (2, 3)])
+    [[0, 1, 2, 3]]
     """
     n = len(top)
+    n2 = 2 * n
     top_partner: dict[int, int] = {}
     bot_partner: dict[int, int] = {}
     for a, b in top:
@@ -251,7 +208,7 @@ def meandric_components(
 
     visited: set[int] = set()
     components: list[list[int]] = []
-    for start in range(1, 2 * n + 1):
+    for start in range(n2):
         if start in visited:
             continue
         comp: list[int] = []
