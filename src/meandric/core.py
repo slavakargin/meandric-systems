@@ -224,3 +224,53 @@ def meandric_components(
                 break
         components.append(comp)
     return components
+
+# ── Reduction ─────────────────────────────────────────────────────────
+
+def _find_reducible_leaf(domain: list[str], range_: list[str]) -> int:
+    """Find a leaf index k such that both partitions have a caret at (k, k+1).
+
+    A caret at k means partition[k] = p+'0' and partition[k+1] = p+'1'
+    for some prefix p.  Returns -1 if no such k exists (system is reduced).
+    """
+    for k in range(len(domain) - 1):
+        dp, rp = domain[k], range_[k]
+        dn, rn = domain[k + 1], range_[k + 1]
+        if (dp.endswith('0') and dn.endswith('1') and dp[:-1] == dn[:-1] and
+            rp.endswith('0') and rn.endswith('1') and rp[:-1] == rn[:-1]):
+            return k
+    return -1
+
+
+def _reduce_once(domain: list[str], range_: list[str]) -> tuple[list[str], list[str]]:
+    """Remove one pair of matching carets, if any."""
+    k = _find_reducible_leaf(domain, range_)
+    if k < 0:
+        return domain, range_
+    new_domain = domain[:k] + [domain[k][:-1]] + domain[k + 2:]
+    new_range = range_[:k] + [range_[k][:-1]] + range_[k + 2:]
+    return new_domain, new_range
+
+
+def reduce_tree_pair(domain, range_):
+    """Fully reduce a Thompson group element by removing all matching carets."""
+    while True:
+        new_d, new_r = _reduce_once(domain, range_)
+        if new_d is domain:
+            return domain, range_
+        domain, range_ = new_d, new_r
+
+
+def reduce_meandric(top, bottom):
+    """Reduce a meandric system to its canonical (reduced) form."""
+    domain = pairing_to_partition(top)
+    range_ = pairing_to_partition(bottom)
+    rd, rr = reduce_tree_pair(domain, range_)
+    return partition_to_pairing(rd), partition_to_pairing(rr)
+
+
+def is_reduced(top, bottom):
+    """Check whether a meandric system is already reduced."""
+    domain = pairing_to_partition(top)
+    range_ = pairing_to_partition(bottom)
+    return _find_reducible_leaf(domain, range_) < 0
