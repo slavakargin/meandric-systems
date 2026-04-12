@@ -274,3 +274,101 @@ def is_reduced(top, bottom):
     domain = pairing_to_partition(top)
     range_ = pairing_to_partition(bottom)
     return _find_reducible_leaf(domain, range_) < 0
+
+# ── Multiplication and inverse ────────────────────────────────────────
+
+def _merge_trees(t1, t2):
+    """Common refinement of two binary trees."""
+    if t1 is None and t2 is None:
+        return None
+    if t1 is None:
+        return t2
+    if t2 is None:
+        return t1
+    return (_merge_trees(t1[0], t2[0]), _merge_trees(t1[1], t2[1]))
+
+
+def _get_grafts(original, refined):
+    """For each leaf of original, record the subtree that refined puts there."""
+    grafts = []
+    def walk(orig, ref):
+        if orig is None:
+            grafts.append(ref)
+        else:
+            walk(orig[0], ref[0])
+            walk(orig[1], ref[1])
+    walk(original, refined)
+    return grafts
+
+
+def _apply_grafts(tree, grafts):
+    """Replace each leaf of tree with the corresponding graft."""
+    counter = [0]
+    def walk(t):
+        if t is None:
+            g = grafts[counter[0]]
+            counter[0] += 1
+            return g
+        return (walk(t[0]), walk(t[1]))
+    return walk(tree)
+
+
+def multiply_tree_pairs(
+    d1: list[str], r1: list[str],
+    d2: list[str], r2: list[str],
+) -> tuple[list[str], list[str]]:
+    """Multiply two Thompson group elements given as partition pairs.
+
+    Computes the product (D1, R1) * (D2, R2) by expanding until
+    R1 = D2, then returning the reduced (D1', R2').
+
+    Examples
+    --------
+    >>> multiply_tree_pairs(['0','10','11'], ['00','01','1'],
+    ...                     ['0','10','11'], ['00','01','1'])
+    (['0', '10', '110', '111'], ['000', '001', '01', '1'])
+    """
+    t_r1 = _partition_to_tree(r1)
+    t_d2 = _partition_to_tree(d2)
+    t_c = _merge_trees(t_r1, t_d2)
+
+    grafts_1 = _get_grafts(t_r1, t_c)
+    t_d1_exp = _apply_grafts(_partition_to_tree(d1), grafts_1)
+
+    grafts_2 = _get_grafts(t_d2, t_c)
+    t_r2_exp = _apply_grafts(_partition_to_tree(r2), grafts_2)
+
+    return reduce_tree_pair(_tree_to_partition(t_d1_exp),
+                            _tree_to_partition(t_r2_exp))
+
+
+def multiply_meandric(
+    top1: list[tuple[int, int]], bot1: list[tuple[int, int]],
+    top2: list[tuple[int, int]], bot2: list[tuple[int, int]],
+) -> tuple[list[tuple[int, int]], list[tuple[int, int]]]:
+    """Multiply two Thompson group elements given as meandric systems.
+
+    Examples
+    --------
+    >>> t0, b0 = ([(0, 3), (1, 2)], [(0, 1), (2, 3)])
+    >>> multiply_meandric(t0, b0, t0, b0)  # x_0^2
+    ([(0, 5), (1, 2), (3, 4)], [(0, 1), (2, 5), (3, 4)])
+    """
+    d1, r1 = pairing_to_partition(top1), pairing_to_partition(bot1)
+    d2, r2 = pairing_to_partition(top2), pairing_to_partition(bot2)
+    rd, rr = multiply_tree_pairs(d1, r1, d2, r2)
+    return partition_to_pairing(rd), partition_to_pairing(rr)
+
+
+def invert_tree_pair(
+    domain: list[str], range_: list[str]
+) -> tuple[list[str], list[str]]:
+    """Invert a Thompson group element: swap domain and range."""
+    return range_, domain
+
+
+def invert_meandric(
+    top: list[tuple[int, int]], bottom: list[tuple[int, int]]
+) -> tuple[list[tuple[int, int]], list[tuple[int, int]]]:
+    """Invert a meandric system: swap top and bottom."""
+    return bottom, top

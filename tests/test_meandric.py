@@ -7,6 +7,13 @@ from meandric import (
     tree_pair_to_meandric,
     meandric_to_tree_pair,
     meandric_components,
+    reduce_tree_pair,
+    reduce_meandric,
+    is_reduced,
+    multiply_tree_pairs,
+    multiply_meandric,
+    invert_tree_pair,
+    invert_meandric,
     X0_DOMAIN, X0_RANGE,
     X1_DOMAIN, X1_RANGE,
 )
@@ -117,3 +124,105 @@ def test_single_caret():
 def test_mismatched_leaves_raises():
     with pytest.raises(ValueError):
         tree_pair_to_meandric(['0', '1'], ['00', '01', '1'])
+
+# ── reduction ─────────────────────────────────────────────────────────
+
+def test_x0_already_reduced():
+    top, bot = tree_pair_to_meandric(X0_DOMAIN, X0_RANGE)
+    assert is_reduced(top, bot)
+
+
+def test_x1_already_reduced():
+    top, bot = tree_pair_to_meandric(X1_DOMAIN, X1_RANGE)
+    assert is_reduced(top, bot)
+
+
+def test_reduce_x0_exp_leaf0():
+    """x_0 expanded at leaf 0: no trivial loop, but reducible."""
+    top, bot = tree_pair_to_meandric(
+        ['00', '01', '10', '11'], ['000', '001', '01', '1'])
+    assert not is_reduced(top, bot)
+    rt, rb = reduce_meandric(top, bot)
+    t0, b0 = tree_pair_to_meandric(X0_DOMAIN, X0_RANGE)
+    assert (rt, rb) == (t0, b0)
+
+
+def test_reduce_x0_exp_leaf1():
+    """x_0 expanded at leaf 1: trivial loop, reducible."""
+    top, bot = tree_pair_to_meandric(
+        ['0', '100', '101', '11'], ['00', '010', '011', '1'])
+    assert not is_reduced(top, bot)
+    rt, rb = reduce_meandric(top, bot)
+    t0, b0 = tree_pair_to_meandric(X0_DOMAIN, X0_RANGE)
+    assert (rt, rb) == (t0, b0)
+
+
+def test_reduce_identity():
+    top, bot = tree_pair_to_meandric(
+        ['00', '01', '10', '11'], ['00', '01', '10', '11'])
+    rt, rb = reduce_meandric(top, bot)
+    assert rt == [] and rb == []
+
+
+def test_reduce_tree_pair_direct():
+    d, r = reduce_tree_pair(
+        ['00', '01', '10', '11'], ['000', '001', '01', '1'])
+    assert d == X0_DOMAIN
+    assert r == X0_RANGE
+
+
+# ── multiplication ────────────────────────────────────────────────────
+
+def test_x0_squared():
+    d, r = multiply_tree_pairs(X0_DOMAIN, X0_RANGE, X0_DOMAIN, X0_RANGE)
+    assert d == ['0', '10', '110', '111']
+    assert r == ['000', '001', '01', '1']
+
+
+def test_x0_times_x0_inv_is_identity():
+    d_inv, r_inv = invert_tree_pair(X0_DOMAIN, X0_RANGE)
+    d, r = multiply_tree_pairs(X0_DOMAIN, X0_RANGE, d_inv, r_inv)
+    assert d == r  # identity: domain == range
+
+
+def test_x1_times_x1_inv_is_identity():
+    d_inv, r_inv = invert_tree_pair(X1_DOMAIN, X1_RANGE)
+    d, r = multiply_tree_pairs(X1_DOMAIN, X1_RANGE, d_inv, r_inv)
+    assert d == r
+
+
+def test_multiply_meandric_x0_squared():
+    t0, b0 = tree_pair_to_meandric(X0_DOMAIN, X0_RANGE)
+    top, bot = multiply_meandric(t0, b0, t0, b0)
+    d, r = meandric_to_tree_pair(top, bot)
+    assert d == ['0', '10', '110', '111']
+    assert r == ['000', '001', '01', '1']
+
+
+def test_invert_meandric_swaps():
+    t0, b0 = tree_pair_to_meandric(X0_DOMAIN, X0_RANGE)
+    ti, bi = invert_meandric(t0, b0)
+    assert ti == b0 and bi == t0
+
+
+def test_x0_cubed():
+    d2, r2 = multiply_tree_pairs(X0_DOMAIN, X0_RANGE, X0_DOMAIN, X0_RANGE)
+    d3, r3 = multiply_tree_pairs(d2, r2, X0_DOMAIN, X0_RANGE)
+    assert is_reduced(
+        *tree_pair_to_meandric(d3, r3))
+
+
+def test_multiply_identity_left():
+    """id * x_0 = x_0."""
+    identity = ['0', '1']
+    d, r = multiply_tree_pairs(identity, identity, X0_DOMAIN, X0_RANGE)
+    assert d == X0_DOMAIN
+    assert r == X0_RANGE
+
+
+def test_multiply_identity_right():
+    """x_0 * id = x_0."""
+    identity = ['0', '1']
+    d, r = multiply_tree_pairs(X0_DOMAIN, X0_RANGE, identity, identity)
+    assert d == X0_DOMAIN
+    assert r == X0_RANGE
