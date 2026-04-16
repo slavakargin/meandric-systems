@@ -226,3 +226,58 @@ def test_multiply_identity_right():
     d, r = multiply_tree_pairs(X0_DOMAIN, X0_RANGE, identity, identity)
     assert d == X0_DOMAIN
     assert r == X0_RANGE
+
+# ── Element class ─────────────────────────────────────────────────────
+
+from meandric import Element, X0, X1, ID
+
+
+def test_x0_times_x0_inv():
+    assert (X0 * X0.inv()).is_identity()
+
+
+def test_x1_times_x1_inv():
+    assert (X1 * X1.inv()).is_identity()
+
+
+def test_identity_neutral():
+    assert ID * X0 == X0
+    assert X0 * ID == X0
+
+
+def test_power():
+    assert X0 ** 3 == X0 * X0 * X0
+
+
+def test_power_zero():
+    assert (X0 ** 0).is_identity()
+
+
+def test_negative_power():
+    assert X0 ** (-1) == X0.inv()
+    assert X0 ** (-2) == X0.inv() * X0.inv()
+
+
+def test_conjugation():
+    u = X1 ** X0  # x0^{-1} x1 x0
+    assert u == X0.inv() * X1 * X0
+
+
+def test_commutator():
+    comm = X0.inv() * X1.inv() * X0 * X1
+    assert not comm.is_identity()
+    assert comm.n_leaves() == 5
+
+
+def test_n_components_x0():
+    assert X0.n_components() == 1
+
+
+def test_n_components_x1():
+    assert X1.n_components() == 2
+
+
+def test_associativity():
+    a = (X0 * X1) * X0
+    b = X0 * (X1 * X0)
+    assert a == b

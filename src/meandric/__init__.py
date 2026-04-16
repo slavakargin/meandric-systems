@@ -12,6 +12,8 @@ from meandric.core import (
     multiply_meandric,
     invert_tree_pair,
     invert_meandric,
+    Element,
+    X0, X1, ID,
 )
 from meandric.plot import plot_meandric, plot_element
 from meandric.elements import X0_DOMAIN, X0_RANGE, X1_DOMAIN, X1_RANGE
@@ -37,4 +39,6 @@ __all__ = [
     "X0_RANGE",
     "X1_DOMAIN",
     "X1_RANGE",
+    "Element",
+    "X0", "X1", "ID",
 ]

@@ -372,3 +372,83 @@ def invert_meandric(
 ) -> tuple[list[tuple[int, int]], list[tuple[int, int]]]:
     """Invert a meandric system: swap top and bottom."""
     return bottom, top
+
+# ── Element class ─────────────────────────────────────────────────────
+
+class Element:
+    """A Thompson group F element with convenient syntax.
+
+    Usage:
+        x0, x1 = X0, X1
+        y0 = x0.inv()
+        z = y0 * y1 * x0 * x1
+        v = z ** 3
+        u = v ** x0        # conjugation: x0^{-1} * v * x0
+    """
+
+    def __init__(self, domain: list[str], range_: list[str]):
+        d, r = reduce_tree_pair(domain, range_)
+        self.domain = d
+        self.range = r
+
+    def __mul__(self, other: 'Element') -> 'Element':
+        d, r = multiply_tree_pairs(
+            self.domain, self.range, other.domain, other.range)
+        return Element(d, r)
+
+    def __pow__(self, exp):
+        if isinstance(exp, int):
+            if exp == 0:
+                return Element(['0', '1'], ['0', '1'])
+            if exp < 0:
+                return self.inv() ** (-exp)
+            result = self
+            for _ in range(exp - 1):
+                result = result * self
+            return result
+        if isinstance(exp, Element):
+            return exp.inv() * self * exp
+        return NotImplemented
+
+    def inv(self) -> 'Element':
+        return Element(self.range, self.domain)
+
+    def meandric(self):
+        return tree_pair_to_meandric(self.domain, self.range)
+
+    def components(self):
+        top, bot = self.meandric()
+        return meandric_components(top, bot)
+
+    def n_components(self) -> int:
+        return len(self.components())
+
+    def n_leaves(self) -> int:
+        return len(self.domain)
+
+    def is_identity(self) -> bool:
+        return self.domain == self.range
+
+    def __eq__(self, other):
+        if not isinstance(other, Element):
+            return NotImplemented
+        return self.domain == other.domain and self.range == other.range
+
+    def __repr__(self):
+        return f"Element({self.domain}, {self.range})"
+
+    def __str__(self):
+        top, bot = self.meandric()
+        return f"top={top} bot={bot} ({self.n_components()} comp)"
+    
+    def plot(self, title=None, **kwargs):
+        from meandric.plot import plot_meandric
+        top, bot = self.meandric()
+        if title is None:
+            title = f"{self.n_components()} comp, {self.n_leaves()} leaves"
+        return plot_meandric(top, bot, title=title, **kwargs)
+
+
+X0 = Element(['0', '10', '11'], ['00', '01', '1'])
+X1 = Element(['0', '10', '110', '111'], ['0', '100', '101', '11'])
+ID = Element(['0', '1'], ['0', '1'])
