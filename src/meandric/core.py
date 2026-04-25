@@ -447,6 +447,13 @@ class Element:
         if title is None:
             title = f"{self.n_components()} comp, {self.n_leaves()} leaves"
         return plot_meandric(top, bot, title=title, **kwargs)
+    
+    @staticmethod
+    def xn(n):
+        """Generator x_n."""
+        from meandric.elements import xn
+        d, r = xn(n)
+        return Element(d, r)
 
 
 X0 = Element(['0', '10', '11'], ['00', '01', '1'])
