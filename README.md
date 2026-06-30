@@ -40,6 +40,23 @@ fig, ax = plot_element(X0_DOMAIN, X0_RANGE, title='$x_0$')
 fig.savefig('x0.png', dpi=150, bbox_inches='tight')
 ```
 
+## Word length
+
+`Element.word_length()` returns the length over the generators `{x_0, x_1}`,
+read directly off the reduced tree pair by the Fordham / Belk–Brown formula
+(no Cayley-graph search):
+
+```python
+from meandric import Element, X0, X1
+
+(X0 * X1 * X0.inv()).word_length()   # distance in the word metric
+Element.xn(1).inv().word_length()    # 1
+```
+
+It is inversion-invariant (`f.word_length() == f.inv().word_length()`) and has
+been checked against breadth-first search on the Cayley graph over the entire
+ball of radius 8.
+
 ## Data formats
 
 | Object | Representation | Example |
@@ -61,6 +78,7 @@ fig.savefig('x0.png', dpi=150, bbox_inches='tight')
 ### Analysis
 
 - `meandric_components(top, bottom)` — connected components (closed curves)
+- `word_length(domain, range_)` — word length over `{x_0, x_1}` (Fordham / Belk–Brown), also available as the method `Element.word_length()`
 
 ### Visualization
 

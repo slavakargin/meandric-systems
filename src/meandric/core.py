@@ -426,6 +426,16 @@ class Element:
     def n_leaves(self) -> int:
         return len(self.domain)
 
+    def word_length(self) -> int:
+        """Word length over the generating set ``{x_0, x_1}``.
+
+        Computed directly from the reduced tree pair by the Fordham /
+        Belk--Brown formula (see :mod:`meandric.length`); no Cayley-graph
+        search.  Satisfies ``f.word_length() == f.inv().word_length()``.
+        """
+        from meandric.length import word_length
+        return word_length(self.domain, self.range)
+
     def is_identity(self) -> bool:
         return self.domain == self.range
 

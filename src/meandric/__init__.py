@@ -17,6 +17,7 @@ from meandric.core import (
 )
 from meandric.plot import plot_meandric, plot_element
 from meandric.elements import X0_DOMAIN, X0_RANGE, X1_DOMAIN, X1_RANGE
+from meandric.length import word_length
 
 __version__ = "0.1.0"
 
@@ -41,4 +42,5 @@ __all__ = [
     "X1_RANGE",
     "Element",
     "X0", "X1", "ID",
+    "word_length",
 ]
